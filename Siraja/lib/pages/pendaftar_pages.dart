@@ -21,7 +21,7 @@ class _PendaftaranPagesState extends State<PendaftaranPages> {
   static const Color accentColor = Color(0xFF4F46E5);
   static const Color scaffoldBgColor = Color(0xFFF1F5F9); // Latar belakang soft gray agar form tidak flat
   static const Color surfaceColor = Color(0xFFF8FAFC);
-  static const Color successColor = Color(0xFF00A651);
+  static const Color successColor = Color(0xFF102E5A);
 
   @override
   void dispose() {

@@ -1,13 +1,17 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 class LogicProfile {
-  // Samakan baseUrl dengan host backend Laravel kamu
+  // Menghubungkan ke host backend Laravel di emulator lokal
   static const String baseUrl = 'http://10.0.2.2:8000/api';
 
-  /// Fungsi untuk mengambil data profil user yang sedang login
+  /// Fungsi untuk mengambil data profil user menggunakan Laravel Sanctum token
   static Future<Map<String, dynamic>> getProfile(String token) async {
     final url = Uri.parse('$baseUrl/me');
+
+    // Pastikan token bersih dari spasi atau karakter aneh bawaan storage
+    final cleanToken = token.trim();
 
     try {
       final response = await http.get(
@@ -15,28 +19,38 @@ class LogicProfile {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          // Token dikirim via header Authorization
-          'Authorization': 'Bearer $token',
+          // Mengirimkan Token Bearer Sanctum Asli ke middleware backend
+          'Authorization': 'Bearer $cleanToken',
         },
       );
 
       final Map<String, dynamic> responseData = jsonDecode(response.body);
 
+      // FIX: Jika backend sukses mengembalikan kode 200
       if (response.statusCode == 200 && responseData['success'] == true) {
         return {
           'success': true,
-          'data': responseData['data'],
-        };
-      } else {
-        return {
-          'success': false,
-          'message': responseData['message'] ?? 'Gagal mengambil data profil.',
+          'data': responseData['data'], // Mengambil hirarki data profil & lokasi user
         };
       }
-    } catch (e) {
+
+      // FIX: Deteksi spesifik jika token ditolak/unauthenticated oleh Sanctum
+      if (response.statusCode == 401) {
+        return {
+          'success': false,
+          'message': 'Sesi login telah habis (Unauthenticated). Silakan login ulang.',
+        };
+      }
+
       return {
         'success': false,
-        'message': 'Tidak dapat terhubung ke server.',
+        'message': responseData['message'] ?? 'Gagal mengambil data profil.',
+      };
+    } catch (e) {
+      debugPrint("Error pada LogicProfile: $e");
+      return {
+        'success': false,
+        'message': 'Tidak dapat terhubung ke server backend.',
       };
     }
   }

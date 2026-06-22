@@ -22,13 +22,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String adminEmail = "";
   String adminRole = "";
 
-  // Mengambil data profil asli dari Backend API Laravel
+  @override
+  void initState() {
+    super.initState();
+    fetchProfileData();
+  }
+
+  /// Mengambil data profil asli dari Backend API Laravel Sanctum
   Future<void> fetchProfileData() async {
     setState(() {
       _isLoading = true;
     });
 
-    // Memanggil logic API terpisah
+    // Memanggil logic API dengan token session saat ini
     final result = await LogicProfile.getProfile(widget.userToken);
 
     if (mounted) {
@@ -41,25 +47,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final List lokasiUser = userData['lokasi_user'] ?? [];
 
         setState(() {
+          // FIX: Memasukkan data realtime murni hasil query database MySQL backend
           adminName = userData['name'] ?? '-';
           adminEmail = userData['email'] ?? '-';
-          // Mengambil nama_lokasi aktif atau default role jika lokasi kosong
+
+          // Mengambil nama_lokasi aktif sesuai relasi tabel hirarki di backend
           adminRole = lokasiUser.isNotEmpty
               ? lokasiUser.first['lokasi']['nama_lokasi']
               : "Super Admin";
         });
       } else {
-        // Fallback data jika server mati / token belum siap saat development
+        // FIX: Hapus data tiruan "Mochamad Alphin" statis agar ketahuan jika token bermasalah
         setState(() {
-          adminName = "Mochamad Alphin";
-          adminEmail = "alphin.admin@perkim.go.id";
-          adminRole = "Rusun Pekerja Dayeuh";
+          adminName = "Gagal Memuat";
+          adminEmail = "Token tidak valid";
+          adminRole = "Unauthenticated";
         });
 
+        // Tampilkan pesan error transparan ke user
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['message'] ?? 'Gagal memuat data dari server. Memakai data lokal.'),
-            backgroundColor: Colors.amber.shade800,
+            content: Text(result['message'] ?? 'Sesi telah habis. Silakan login kembali.'),
+            backgroundColor: Colors.red.shade800,
+            action: SnackBarAction(
+              label: 'LOGIN',
+              textColor: Colors.white,
+              onPressed: () {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                      (route) => false,
+                );
+              },
+            ),
           ),
         );
       }
@@ -77,7 +97,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       await Future.delayed(const Duration(milliseconds: 1200));
     } catch (e) {
-      // Handle error
+      debugPrint("Error logout: $e");
     } finally {
       if (mounted) {
         setState(() {
@@ -132,12 +152,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       },
     );
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    fetchProfileData();
   }
 
   @override
@@ -207,12 +221,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    adminName.isEmpty ? '-' : adminName,
+                    adminName,
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: primaryColor),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    adminEmail.isEmpty ? '-' : adminEmail,
+                    adminEmail,
                     style: const TextStyle(fontSize: 13, color: Color(0xFF64748B), fontWeight: FontWeight.w400),
                   ),
                   const SizedBox(height: 14),
@@ -223,7 +237,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       borderRadius: BorderRadius.circular(30),
                     ),
                     child: Text(
-                      adminRole.isEmpty ? '-' : adminRole,
+                      adminRole,
                       style: TextStyle(color: primaryColor, fontWeight: FontWeight.w700, fontSize: 11, letterSpacing: 0.3),
                     ),
                   ),
@@ -233,7 +247,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const SizedBox(height: 12),
 
-            // 2. Blok Menu Gabungan (Hanya Menyisakan Menu Pilihan & Lebih Rapi)
+            // 2. Blok Menu Pilihan Konten Rapi
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
@@ -247,18 +261,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: Icons.lock_outline_rounded,
                     title: 'Keamanan & Sandi',
                     subtitle: 'Ubah password akses akun Anda',
-                    onTap: () {
-                      // Navigasi ganti sandi jika diperlukan
-                    },
+                    onTap: () {},
                   ),
                   const Divider(height: 1, indent: 56, color: Color(0xFFE2E8F0)),
                   _buildMenuTile(
                     icon: Icons.info_outline_rounded,
                     title: 'Tentang Aplikasi',
                     subtitle: 'Versi 1.0.0 (SIRAJA Balarea)',
-                    onTap: () {
-                      // Tampilkan info dialog / halaman tentang aplikasi
-                    },
+                    onTap: () {},
                   ),
                 ],
               ),
@@ -275,7 +285,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: OutlinedButton(
                   style: OutlinedButton.styleFrom(
                     backgroundColor: Colors.white,
-                    side: const BorderSide(color: Color(0xFFFCA5A5), width: 1.2), // Border merah soft bergaya iOS
+                    side: const BorderSide(color: Color(0xFFFCA5A5), width: 1.2),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     elevation: 0,
                   ),
@@ -301,7 +311,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // Refaktor Widget Menu Tile agar reusable, bersih, dan mendukung navigasi kustom
   Widget _buildMenuTile({
     required IconData icon,
     required String title,

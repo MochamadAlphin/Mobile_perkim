@@ -49,12 +49,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   void initState() {
     super.initState();
+
+    // Tampung token aktif ke dalam variabel lokal (gunakan fallback jika kosong)
+    final String tokenAktif = widget.token ?? "bypass_token_development";
+
     _screens = [
-      const DashboardScreen(),
-      // FIX: Mengalirkan token dari login screen menuju ke ProfileScreen
-      ProfileScreen(userToken: widget.token ?? "bypass_token_development"),
+      // Hapus keyword const, lalu oper tokenAktif ke sini!
+      DashboardScreen(token: tokenAktif),
+
+      // Oper juga ke ProfileScreen
+      ProfileScreen(userToken: tokenAktif),
     ];
   }
+
 
   @override
   Widget build(BuildContext context) {
